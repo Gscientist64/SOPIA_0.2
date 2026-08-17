@@ -458,7 +458,7 @@ class GeminiClient(LLMClient):
                     contents=prompt,
                     config=self._types.GenerateContentConfig(
                         temperature=0.3,
-                        max_output_tokens=1024,
+                        max_output_tokens=8192,
                     ),
                 )
                 return (resp.text or "").strip()
@@ -965,7 +965,7 @@ CORS(app)
 
 # Bump this when you deploy a notable change — shown in /health so you can
 # always verify which build is actually running on Render.
-DEPLOY_VERSION = "2026-08-17.4"  # google-genai SDK + gemini-3.6-flash + faster responses
+DEPLOY_VERSION = "2026-08-17.5"  # fix MAX_TOKENS truncation (8192 output tokens)
 
 # Global state
 _kb: Optional[InMemoryKB] = None

@@ -40,7 +40,7 @@ class LLMClient:
                     contents=prompt,
                     config=GenerateContentConfig(
                         temperature=0.3,
-                        max_output_tokens=2048,
+                        max_output_tokens=8192,
                     ),
                 )
                 return response.text.strip()
