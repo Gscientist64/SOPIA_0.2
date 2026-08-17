@@ -965,7 +965,7 @@ CORS(app)
 
 # Bump this when you deploy a notable change — shown in /health so you can
 # always verify which build is actually running on Render.
-DEPLOY_VERSION = "2026-08-17.5"  # fix MAX_TOKENS truncation (8192 output tokens)
+DEPLOY_VERSION = "2026-08-17.6"  # Telegram bot embedded in web service
 
 # Global state
 _kb: Optional[InMemoryKB] = None
@@ -1048,6 +1048,35 @@ def _init_if_needed():
 
 # Initialize on startup
 _init_if_needed()
+
+# -------------------------------------------------------------------------
+# TELEGRAM BOT — runs in a background thread when a token is configured,
+# so the same Render service hosts both the web app AND the bot (free tier).
+# -------------------------------------------------------------------------
+_telegram_started = False
+
+def _start_telegram_bot():
+    """Start the Telegram bot in a daemon thread if TELEGRAM_BOT_TOKEN is set."""
+    global _telegram_started
+    if _telegram_started:
+        return
+    if not os.getenv("TELEGRAM_BOT_TOKEN", ""):
+        print("ℹ️  TELEGRAM_BOT_TOKEN not set — Telegram bot disabled.")
+        return
+    try:
+        import telegram_bot
+        # Point the bot at this same service's /chat endpoint by default.
+        if not os.getenv("SOPIA_API_URL"):
+            base = os.getenv("RENDER_EXTERNAL_URL", "http://localhost:5050")
+            os.environ["SOPIA_API_URL"] = f"{base}/chat"
+        _telegram_started = True
+        thread = threading.Thread(target=telegram_bot.main, daemon=True, name="telegram-bot")
+        thread.start()
+        print("🤖 Telegram bot started in background thread.")
+    except Exception as e:
+        print(f"⚠️  Failed to start Telegram bot: {e}")
+
+_start_telegram_bot()
 
 # -------------------------------------------------------------------------
 # ROUTES - ENHANCED WITH CLINICAL FEATURES + SOP ADDITION

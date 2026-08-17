@@ -20,6 +20,10 @@ services:
         value: "False"
       - key: GOOGLE_API_KEY
         sync: false            # set in Render dashboard
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false            # from @BotFather — enables the Telegram bot
+      - key: SOPIA_API_URL
+        sync: false            # e.g. https://sopia-mvp.onrender.com/chat
       - key: OPENAI_API_KEY
         sync: false            # optional fallback — leave empty if unused
       - key: TWILIO_ACCOUNT_SID
