@@ -3,7 +3,7 @@ flask_cors
 sentence-transformers
 torch
 transformers
-google-generativeai
+google-genai
 python-dotenv
 twilio
 scikit-learn
@@ -11,8 +11,6 @@ numpy
 beautifulsoup4
 requests
 python-docx
-google-generativeai 
-python-docx 
 pickle-mixin
 pillow
 pytesseract

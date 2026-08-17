@@ -10,7 +10,7 @@
 
 flask
 flask_cors
-google-generativeai
+google-genai
 python-dotenv
 openai
 twilio

@@ -405,54 +405,63 @@ class LLMClient:
 
 class GeminiClient(LLMClient):
     def __init__(self, api_key: str, model_name: Optional[str] = None):
-        import google.generativeai as genai
+        # New official SDK (google-genai) — the legacy google.generativeai
+        # package is deprecated and no longer supported by Google.
+        from google import genai
+        from google.genai import types
         if not api_key:
             raise RuntimeError("API key not provided for Gemini backend.")
         
         self.api_key = api_key
-        genai.configure(api_key=api_key)
+        self._client = genai.Client(api_key=api_key)
 
-        # Try preferred models in order
+        # Try preferred models in order (current generation only)
+        # NOTE: gemini-2.5-* returns 404 for new users — must use 3.x models
         preferred_models = [
-            "models/gemini-2.5-flash",
-            "models/gemini-2.0-flash", 
-            "models/gemini-1.5-flash",
-            "models/gemini-1.5-pro-latest"
+            "gemini-3.6-flash",
+            "gemini-3.7-flash",
+            "gemini-3.5-flash",
+            "gemini-flash-latest",
         ]
-        
         if model_name:
-            preferred_models.insert(0, model_name)
+            preferred_models.insert(0, model_name.replace("models/", ""))
 
         # Find first available model
         chosen_model = None
         try:
-            models = genai.list_models()
-            available = {m.name for m in models if "generateContent" in getattr(m, "supported_generation_methods", [])}
-            
+            available = set()
+            for m in self._client.models.list():
+                actions = getattr(m, "supported_actions", None) or []
+                if "generateContent" in actions:
+                    available.add(m.name.replace("models/", ""))
             for model in preferred_models:
                 if model in available:
                     chosen_model = model
                     break
-                    
             if not chosen_model and available:
-                chosen_model = sorted(list(available))[0]
+                chosen_model = sorted(available)[0]
             elif not chosen_model:
                 raise RuntimeError("No Gemini models available")
-                
-        except Exception as e:
-            # If listing fails, try default
-            chosen_model = "models/gemini-2.0-flash"
+        except Exception:
+            # If listing fails, use the default current model
+            chosen_model = "gemini-3.6-flash"
 
         self.model_name = chosen_model
-        self._genai = genai
-        self._model = genai.GenerativeModel(self.model_name)
+        self._types = types
 
     def generate(self, prompt: str) -> str:
         import time
         for attempt in range(3):
             try:
-                resp = self._model.generate_content(prompt)
-                return getattr(resp, "text", "").strip()
+                resp = self._client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
+                    config=self._types.GenerateContentConfig(
+                        temperature=0.3,
+                        max_output_tokens=2048,
+                    ),
+                )
+                return (resp.text or "").strip()
             except Exception as e:
                 if attempt == 2:
                     raise e

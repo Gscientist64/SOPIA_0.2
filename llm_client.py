@@ -16,8 +16,8 @@ class LLMClient:
         if self.provider == "gemini":
             # ✅ New SDK initialization
             self.client = genai.Client(api_key=self.api_key)
-            # Use the correct model names for the new SDK
-            self.model = "gemini-2.0-flash"  # or "gemini-1.5-flash" if available
+            # Use current model names (gemini-2.x is retired for new users)
+            self.model = "gemini-3.6-flash"
             log.info(f"🤖 Google GenAI ({self.model}) initialized successfully.")
         
         elif self.provider == "openai":

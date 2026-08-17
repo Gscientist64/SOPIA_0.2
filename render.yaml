@@ -8,7 +8,7 @@ services:
     runtime: python
     plan: free                # Free tier: 750 hrs/month = 24/7 uptime
     buildCommand: pip install -r requirements-render.txt
-    startCommand: gunicorn --workers 1 --timeout 120 --bind 0.0.0.0:$PORT app:app
+    startCommand: gunicorn --workers 1 --timeout 180 --graceful-timeout 30 --bind 0.0.0.0:$PORT app:app
     healthCheckPath: /health
     autoDeploy: true
     envVars:
