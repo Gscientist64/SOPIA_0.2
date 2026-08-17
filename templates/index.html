@@ -1,0 +1,694 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOPIA - ACE 5 SOP Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(215, 28, 121, 0.887);
+            overflow: hidden;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background: #b40ea4;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .chat-header p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+        }
+        
+        .user-message {
+            justify-content: flex-end;
+        }
+        
+        .bot-message {
+            justify-content: flex-start;
+        }
+        
+        .message-bubble {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        
+        .user-message .message-bubble {
+            background: #eb22de;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .bot-message .message-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 5px;
+        }
+
+        .bot-message .message-bubble {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .response-meta {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px dashed #e0e0e0;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .confidence-high {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .confidence-medium {
+            color: #ffc107;
+            font-weight: bold;
+        }
+
+        .confidence-low {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            flex-shrink: 0;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        #user-input:focus {
+            border-color: #007bff;
+        }
+        
+        #send-btn {
+            padding: 12px 24px;
+            background: #f91ab6;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+            font-family: inherit;
+        }
+        
+        #send-btn:hover:not(:disabled) {
+            background: #0056b3;
+        }
+        
+        #send-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 10px 16px;
+            color: #666;
+            font-style: italic;
+            background: white;
+            border-radius: 18px;
+            border-bottom-left-radius: 5px;
+            max-width: 70%;
+            margin-bottom: 15px;
+        }
+        
+        .suggested-questions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+
+        .suggestion-chip {
+            background: #e9ecef;
+            border: 1px solid #dee2e6;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .suggestion-chip:hover {
+            background: #007bff;
+            color: white;
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        .topics-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 10px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .topics-section h3 {
+            margin-bottom: 10px;
+            color: #1976d2;
+            font-size: 14px;
+        }
+
+        .topics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .topic-item {
+            padding: 6px 10px;
+            background: white;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #bbdefb;
+        }
+
+        .topic-item:hover {
+            background: #bbdefb;
+            transform: translateY(-1px);
+        }
+
+        .system-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-ready {
+            background: #28a745;
+        }
+
+        .status-loading {
+            background: #ffc107;
+        }
+
+        .bot-message .message-bubble .bullet-point {
+            margin: 5px 0;
+            padding-left: 8px;
+            position: relative;
+        }
+
+        .bot-message .message-bubble .bullet-point:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .response-meta {
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .status-error {
+            background: #dc3545;
+        }
+
+        /* Enhanced chat styling */
+        .bot-message .message-bubble {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .user-message .message-bubble {
+            box-shadow: 0 2px 8px rgba(235, 34, 222, 0.2);
+        }
+
+        .emoji {
+            font-size: 16px;
+            margin-right: 4px;
+        }
+
+        .chat-messages .bot-message:first-child .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
+        .chat-messages .bot-message:first-child .message-bubble strong {
+            color: white;
+            font-size: 16px;
+        }
+
+        .chat-messages .bot-message:first-child .topics-section {
+            background: rgba(255, 255, 255, 0.9);
+            border-left: 4px solid #ff6b6b;
+        }
+
+        /* Clean text formatting */
+        .bot-message .message-bubble {
+            font-weight: normal;
+        }
+
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="system-status" id="system-status">
+        <span class="status-indicator status-loading"></span>
+        <span id="status-text">Initializing...</span>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>SOPIA - ACE 5 SOP Assistant</h1>
+            <p>Your intelligent HIV Care SOP companion</p>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot-message">
+                <div class="message-bubble">
+                    <span class="emoji">👋</span> <strong>Hello! I'm SOPIA</strong><br>
+                    I'm your friendly ACE 5 Standard Operating Procedure assistant! I can help you with HIV care procedures, clinical guidelines, and SOP protocols in a way that's easy to understand. 😊
+                    
+                    <div class="topics-section">
+                        <h3><span class="emoji">📚</span> Available SOP Topics:</h3>
+                        <div class="topics-grid" id="topics-grid">
+                            <!-- Topics will be loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="response-meta">
+                        <span id="initial-status">Loading knowledge base...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typing-indicator">
+            <span class="emoji">💭</span> SOPIA is analyzing the SOP...
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="input-group">
+                <input type="text" id="user-input" placeholder="Ask about ART, AHD, laboratory procedures..." autocomplete="off">
+                <button id="send-btn">Send <span class="emoji">🚀</span></button>
+            </div>
+            <div class="suggested-questions" id="suggested-questions">
+                <!-- Suggested questions will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const systemStatus = document.getElementById('system-status');
+        const statusText = document.getElementById('status-text');
+        const topicsGrid = document.getElementById('topics-grid');
+        const suggestedQuestions = document.getElementById('suggested-questions');
+        const initialStatus = document.getElementById('initial-status');
+
+        // Initialize the system
+        async function initializeSystem() {
+            try {
+                setSystemStatus('loading', 'Loading knowledge base...');
+                
+                const response = await fetch('/initialize', {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    const docCount = data.stats.total_documents || data.stats.qa_pairs || data.stats.kb_passages_indexed || 'many';
+                    setSystemStatus('ready', `Ready - ${docCount} documents loaded`);
+                    initialStatus.textContent = `✅ Knowledge base loaded with ${docCount} documents`;
+                    
+                    // Load actual SOP sections and suggestions
+                    await loadSopSections();
+                    await loadSuggestedQuestions();
+                } else {
+                    throw new Error(data.error || 'Initialization failed');
+                }
+            } catch (error) {
+                console.error('Initialization error:', error);
+                setSystemStatus('error', 'Initialization failed');
+                initialStatus.textContent = '❌ Failed to load knowledge base';
+                addMessage('😔 Sorry, I encountered an error during initialization. Please refresh the page and try again.', false);
+            }
+        }
+
+        function setSystemStatus(status, message) {
+            const indicator = systemStatus.querySelector('.status-indicator');
+            indicator.className = 'status-indicator';
+            
+            switch(status) {
+                case 'ready':
+                    indicator.classList.add('status-ready');
+                    break;
+                case 'loading':
+                    indicator.classList.add('status-loading');
+                    break;
+                case 'error':
+                    indicator.classList.add('status-error');
+                    break;
+            }
+            
+            statusText.textContent = message;
+        }
+
+        async function loadSopSections() {
+            try {
+                const response = await fetch('/sop-sections');
+                const data = await response.json();
+                
+                if (data.sections && data.sections.length > 0) {
+                    topicsGrid.innerHTML = '';
+                    // Show a diverse selection of SOP sections
+                    data.sections.slice(0, 15).forEach(section => {
+                        const topicElement = document.createElement('div');
+                        topicElement.className = 'topic-item';
+                        
+                        // Clean up section names
+                        let cleanSection = section
+                            .replace('SOP', '')
+                            .replace('Standard Operating Procedure', '')
+                            .replace(/[\(\)]/g, '')
+                            .trim();
+                        
+                        // Shorten very long names
+                        if (cleanSection.length > 25) {
+                            cleanSection = cleanSection.substring(0, 25) + '...';
+                        }
+                        
+                        topicElement.textContent = cleanSection || section;
+                        topicElement.title = section; // Show full name on hover
+                        topicElement.onclick = () => askQuestion(`Tell me about ${section}`);
+                        topicsGrid.appendChild(topicElement);
+                    });
+                } else {
+                    // Fallback to generic topics
+                    await loadTopics();
+                }
+            } catch (error) {
+                console.error('Error loading SOP sections:', error);
+                // Fallback to generic topics
+                await loadTopics();
+            }
+        }
+
+        async function loadTopics() {
+            try {
+                const response = await fetch('/topics');
+                const data = await response.json();
+                
+                if (data.topics && data.topics.length > 0) {
+                    topicsGrid.innerHTML = '';
+                    data.topics.slice(0, 12).forEach(topic => {
+                        const topicElement = document.createElement('div');
+                        topicElement.className = 'topic-item';
+                        topicElement.textContent = topic;
+                        topicElement.onclick = () => askQuestion(`Tell me about ${topic}`);
+                        topicsGrid.appendChild(topicElement);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading topics:', error);
+            }
+        }
+
+        async function loadSuggestedQuestions() {
+            try {
+                const response = await fetch('/suggestions');
+                const data = await response.json();
+                
+                if (data.questions && data.questions.length > 0) {
+                    suggestedQuestions.innerHTML = '';
+                    data.questions.forEach(question => {
+                        const chip = document.createElement('div');
+                        chip.className = 'suggestion-chip';
+                        chip.textContent = question;
+                        chip.onclick = () => askQuestion(question);
+                        suggestedQuestions.appendChild(chip);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading suggestions:', error);
+                // Fallback suggestions
+                const fallbackQuestions = [
+                    'What is Advanced HIV Disease?',
+                    'When should ART be started for TB patients?',
+                    'What are the CD4 count criteria?',
+                    'How do you monitor viral load?',
+                    'What is the procedure for HIV testing?',
+                    'How to manage medication adherence?'
+                ];
+                
+                suggestedQuestions.innerHTML = '';
+                fallbackQuestions.forEach(question => {
+                    const chip = document.createElement('div');
+                    chip.className = 'suggestion-chip';
+                    chip.textContent = question;
+                    chip.onclick = () => askQuestion(question);
+                    suggestedQuestions.appendChild(chip);
+                });
+            }
+        }
+
+        function formatBotMessage(text, metadata = {}) {
+            // Clean text by removing markdown and references
+            let formattedText = text
+                // Remove any remaining markdown bold/italic
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\*(.*?)\*/g, '$1')
+                // Ensure clean bullet points
+                .replace(/^•\s*/gm, '• ')
+                // Clean up excessive line breaks
+                .replace(/\n{3,}/g, '\n\n')
+                // Convert line breaks to HTML
+                .replace(/\n/g, '<br>');
+            
+            // Wrap bullet points in proper HTML with enhanced styling
+            formattedText = formattedText.replace(/(•[^<]+)/g, '<div class="bullet-point">$1</div>');
+            
+            // Add clean metadata without references
+            if (metadata.sources && metadata.sources.length > 0) {
+                formattedText += `<div class="response-meta">`;
+                formattedText += `<strong>📚 Information from:</strong> ${metadata.sources.join(', ')}`;
+                formattedText += `</div>`;
+            }
+
+            return formattedText;
+        }
+
+        function addMessage(message, isUser = false, metadata = {}) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            
+            if (isUser) {
+                bubble.textContent = message;
+            } else {
+                bubble.innerHTML = formatBotMessage(message, metadata);
+            }
+            
+            messageDiv.appendChild(bubble);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            typingIndicator.style.display = 'block';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            typingIndicator.style.display = 'none';
+        }
+
+        function setLoadingState(loading) {
+            sendBtn.disabled = loading;
+            sendBtn.textContent = loading ? 'Sending...' : 'Send 🚀';
+        }
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, true);
+            userInput.value = '';
+            
+            // Show typing indicator and set loading state
+            showTypingIndicator();
+            setLoadingState(true);
+            setSystemStatus('loading', 'Processing your question...');
+
+            try {
+                const response = await fetch('/ask', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: message })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.answer) {
+                    addMessage(data.answer, false, {
+                        sources: data.sources_used || [],
+                        confidence: data.confidence || 'medium'
+                    });
+                    setSystemStatus('ready', 'Ready');
+                } else if (data.error) {
+                    addMessage(`😔 Error: ${data.error}`);
+                    setSystemStatus('error', 'Error processing request');
+                } else {
+                    addMessage('😔 Sorry, I encountered an unexpected error. Please try again.');
+                    setSystemStatus('error', 'Unexpected error');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                addMessage('😔 Sorry, there was a connection error. Please check your internet and try again.');
+                setSystemStatus('error', 'Connection error');
+            } finally {
+                hideTypingIndicator();
+                setLoadingState(false);
+                userInput.focus();
+            }
+        }
+
+        function askQuestion(question) {
+            userInput.value = question;
+            sendMessage();
+        }
+
+        // Event listeners
+        sendBtn.addEventListener('click', sendMessage);
+        
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !sendBtn.disabled) {
+                sendMessage();
+            }
+        });
+
+        // Auto-focus input
+        userInput.focus();
+
+        // Initialize the system when page loads
+        document.addEventListener('DOMContentLoaded', initializeSystem);
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# requirements-render.txt
+# LEAN dependency set for Render deployment (free tier optimized).
+#
+# Why so few packages?
+# - The web app loads the prebuilt knowledge base from sopia_kb.pkl
+#   (built locally with document_processor.py), so torch/sentence-transformers
+#   are NOT needed at runtime.
+# - Keeping this list small avoids the multi-GB torch build that frequently
+#   times out or exceeds memory on Render's free tier (512MB RAM).
+
+flask
+flask_cors
+google-generativeai
+python-dotenv
+openai
+twilio
+gunicorn
