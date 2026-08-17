@@ -35,8 +35,8 @@ advanced HIV/AIDS care protocols to healthcare workers — instantly, on any dev
 Deployed MVP: **`https://sopia-mvp.onrender.com`**
 
 Try it live:
-- `/` — full web chat interface
-- `/demo` — sleek investor demo UI
+- `/` — main chat interface (pink theme)
+- `/demo` — same chat UI (alias)
 - `/health` — service health check
 
 ---
@@ -194,8 +194,8 @@ SOPIA_0.2/
 ├── requirements-render.txt # Lean deps for Render (no torch)
 ├── render.yaml             # Render Blueprint config
 ├── templates/
-│   ├── index.html          # Full chat UI
-│   ├── chat_demo.html      # Investor demo UI
+│   ├── chat_demo.html      # Main chat UI (pink theme, served at /)
+│   ├── index.html          # Legacy full-featured chat UI
 │   └── test.html
 └── sops/ · data/ · new_sops/
 ```

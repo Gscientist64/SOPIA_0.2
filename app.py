@@ -1040,11 +1040,12 @@ _init_if_needed()
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    """Main landing page — uses the sleek chat UI"""
+    return render_template("chat_demo.html")
 
 @app.route("/demo")
 def demo():
-    """Demo chat interface for investor presentations"""
+    """Demo chat interface (same as homepage)"""
     return render_template("chat_demo.html")
 
 @app.route("/health")
