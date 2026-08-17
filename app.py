@@ -458,7 +458,7 @@ class GeminiClient(LLMClient):
                     contents=prompt,
                     config=self._types.GenerateContentConfig(
                         temperature=0.3,
-                        max_output_tokens=2048,
+                        max_output_tokens=1024,
                     ),
                 )
                 return (resp.text or "").strip()
@@ -523,6 +523,7 @@ class MultiKeyLLMClient(LLMClient):
         self.clients = []
         self.current_client_index = 0
         self.offline_client = OfflineClient(kb_provider)
+        self.used_offline_fallback = False
         self._initialize_clients()
     
     def _initialize_clients(self):
@@ -575,8 +576,10 @@ class MultiKeyLLMClient(LLMClient):
             print("💡 No API clients available - running in offline mode only")
     
     def generate(self, prompt: str) -> str:
+        self.used_offline_fallback = False
         # If no API clients, use offline mode immediately
         if not self.clients:
+            self.used_offline_fallback = True
             return self.offline_client.generate(prompt)
         
         # Try each client in order
@@ -605,6 +608,7 @@ class MultiKeyLLMClient(LLMClient):
         
         # All API clients failed, fall back to offline mode
         print("🔌 All API clients exhausted, falling back to offline mode")
+        self.used_offline_fallback = True
         return self.offline_client.generate(prompt)
 
 def build_llm(kb_provider) -> LLMClient:
@@ -743,11 +747,9 @@ class EnhancedChatEngine:
             avg_score = sum(top_scores) / len(top_scores) if top_scores else 0
             confidence = min(0.95, max(0.3, avg_score))
             
-            # Check if we're in offline mode
-            is_offline = isinstance(self.llm, OfflineClient) or (
-                hasattr(self.llm, 'clients') and 
-                not self.llm.clients and 
-                hasattr(self.llm, 'offline_client')
+            # Check if we're in offline mode (honest reporting)
+            is_offline = isinstance(self.llm, OfflineClient) or bool(
+                getattr(self.llm, 'used_offline_fallback', False)
             )
             
             response_data = {
@@ -961,6 +963,10 @@ Answer:"""
 app = Flask(__name__, template_folder="templates", static_folder="templates")
 CORS(app)
 
+# Bump this when you deploy a notable change — shown in /health so you can
+# always verify which build is actually running on Render.
+DEPLOY_VERSION = "2026-08-17.4"  # google-genai SDK + gemini-3.6-flash + faster responses
+
 # Global state
 _kb: Optional[InMemoryKB] = None
 _llm: Optional[LLMClient] = None
@@ -1065,8 +1071,14 @@ def health():
         
         # Get API status
         api_status = "unknown"
+        gemini_model = None
         if _llm and hasattr(_llm, 'clients'):
             api_status = f"{len(_llm.clients)} clients available"
+            if _llm.clients:
+                try:
+                    gemini_model = _llm.clients[0]['client'].model_name
+                except Exception:
+                    gemini_model = "unknown"
         elif _llm and isinstance(_llm, OfflineClient):
             api_status = "offline_only"
         elif not _llm:
@@ -1085,6 +1097,8 @@ def health():
             "has_medical_kb": _medical_kb is not None,
             "has_reasoning_engine": _reasoning_engine is not None,
             "api_status": api_status,
+            "gemini_model": gemini_model,
+            "deploy_version": DEPLOY_VERSION,
             "medical_features": medical_status,
             "clinical_reasoning": reasoning_status,
             "cache_stats": cache_stats
