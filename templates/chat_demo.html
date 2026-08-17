@@ -109,6 +109,62 @@
             border-bottom-left-radius: 2px;
         }
 
+        /* Nicely formatted bot message content */
+        .bot .message-content {
+            line-height: 1.55;
+            font-size: 14px;
+        }
+
+        .bot .message-content p {
+            margin: 6px 0;
+        }
+
+        .bot .message-content .bot-label,
+        .bot .message-content .bot-heading {
+            font-weight: 700;
+            color: #c44569;
+            margin: 12px 0 4px;
+            font-size: 0.95em;
+        }
+
+        .bot .message-content ul.bot-list,
+        .bot .message-content ol.bot-list {
+            margin: 6px 0;
+            padding-left: 22px;
+        }
+
+        .bot .message-content li {
+            margin: 4px 0;
+            padding-left: 2px;
+        }
+
+        .bot .message-content li::marker {
+            color: #c44569;
+            font-weight: 700;
+        }
+
+        .bot .message-content hr {
+            border: none;
+            border-top: 1px solid #f2d3db;
+            margin: 12px 0;
+        }
+
+        .bot .message-content strong {
+            color: #c44569;
+        }
+
+        .bot .message-content em {
+            color: #666;
+        }
+
+        .bot .message-content code {
+            background: #fff0f5;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-family: Consolas, 'Courier New', monospace;
+        }
+
         .confidence {
             font-size: 12px;
             margin-top: 5px;
@@ -440,9 +496,12 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${sender}`;
 
-            let content = `<div class="message-content">
-                ${text.replace(/\n/g, '<br>')}
-            `;
+            // Escape HTML for safety, then format the response nicely
+            const body = sender === 'bot'
+                ? formatBotResponse(escapeHtml(text))
+                : `<p>${escapeHtml(text).replace(/\n/g, '<br>')}</p>`;
+
+            let content = `<div class="message-content">${body}`;
 
             if (sender === 'bot') {
                 if (confidence !== null && confidence < 0.7) {
@@ -457,6 +516,79 @@
             messageDiv.innerHTML = content;
             chatArea.appendChild(messageDiv);
             chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // Convert the raw LLM response into clean, structured HTML
+        function formatBotResponse(html) {
+            const lines = html.split('\n');
+            const out = [];
+            let inList = false;   // 'ul' | 'ol' | false
+
+            const closeList = () => {
+                if (inList) { out.push(`</${inList}>`); inList = false; }
+            };
+
+            for (const rawLine of lines) {
+                const line = rawLine.trim();
+                if (!line) { closeList(); continue; }
+
+                // Horizontal rule: ---
+                if (/^[-—–]{3,}$/.test(line)) { closeList(); out.push('<hr>'); continue; }
+
+                // Bullet list item: • / ● / - / *
+                if (/^[•●▪‣]\s+/.test(line) || /^[-*]\s+/.test(line)) {
+                    if (inList !== 'ul') { closeList(); out.push('<ul class="bot-list">'); inList = 'ul'; }
+                    const item = line.replace(/^[•●▪‣]\s+/, '').replace(/^[-*]\s+/, '');
+                    out.push(`<li>${inlineFormat(item)}</li>`);
+                    continue;
+                }
+
+                // Numbered list item: 1. / 1)
+                if (/^\d+[.)]\s+/.test(line)) {
+                    if (inList !== 'ol') { closeList(); out.push('<ol class="bot-list">'); inList = 'ol'; }
+                    out.push(`<li>${inlineFormat(line.replace(/^\d+[.)]\s+/, ''))}</li>`);
+                    continue;
+                }
+
+                closeList();
+
+                // Markdown heading: ## Title
+                if (/^#{1,6}\s+/.test(line)) {
+                    const level = Math.min(line.match(/^(#{1,6})/)[1].length + 2, 6);
+                    out.push(`<h${level} class="bot-heading">${inlineFormat(line.replace(/^#{1,6}\s+/, ''))}</h${level}>`);
+                    continue;
+                }
+
+                // Short label line (e.g. "Key points:", "Important:", "Next steps:")
+                if (line.length < 60 && /^[A-Z][A-Za-z0-9 &()/'-]{1,}:$/.test(line)) {
+                    out.push(`<div class="bot-label">${inlineFormat(line)}</div>`);
+                    continue;
+                }
+
+                // Normal paragraph
+                out.push(`<p>${inlineFormat(line)}</p>`);
+            }
+
+            closeList();
+            return out.join('');
+        }
+
+        // Inline formatting: bold, italics, inline code
+        function inlineFormat(text) {
+            text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            text = text.replace(/(^|[^*\w])\*([^*\n]+)\*([^*\w]|$)/g, '$1<em>$2</em>$3');
+            text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+            return text;
+        }
+
+        // Prevent HTML injection / broken rendering
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         function showLoading() {
