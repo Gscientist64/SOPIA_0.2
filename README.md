@@ -2,7 +2,7 @@
 
 # 🏥 SOPiA
 
-### AI-Powered Clinical Decision Support for HIV Care
+### Standard Operating Procedure Intelligent Assistant
 
 **SOPiA** (Standard Operating Procedure Intelligence Assistant) is a conversational AI that brings
 advanced HIV/AIDS care protocols to healthcare workers — instantly, on any device.
