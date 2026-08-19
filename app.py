@@ -965,7 +965,7 @@ CORS(app)
 
 # Bump this when you deploy a notable change — shown in /health so you can
 # always verify which build is actually running on Render.
-DEPLOY_VERSION = "2026-08-17.6"  # Telegram bot embedded in web service
+DEPLOY_VERSION = "2026-08-19.7"  # Telegram diagnostics + self keep-alive (no sleep)
 
 # Global state
 _kb: Optional[InMemoryKB] = None
@@ -1054,17 +1054,26 @@ _init_if_needed()
 # so the same Render service hosts both the web app AND the bot (free tier).
 # -------------------------------------------------------------------------
 _telegram_started = False
+_telegram_status = "disabled"  # 'disabled' | 'running' | 'error: ...'
 
 def _start_telegram_bot():
     """Start the Telegram bot in a daemon thread if TELEGRAM_BOT_TOKEN is set."""
-    global _telegram_started
+    global _telegram_started, _telegram_status
     if _telegram_started:
         return
     if not os.getenv("TELEGRAM_BOT_TOKEN", ""):
+        _telegram_status = "disabled (no token in env)"
         print("ℹ️  TELEGRAM_BOT_TOKEN not set — Telegram bot disabled.")
         return
     try:
         import telegram_bot
+        # Validate the token BEFORE starting the polling thread so a bad token
+        # shows up as a clear error instead of a silently-unresponsive bot.
+        me = telegram_bot.call("getMe")
+        if not me:
+            _telegram_status = "error: TELEGRAM_BOT_TOKEN invalid or rejected"
+            print("❌ Invalid TELEGRAM_BOT_TOKEN — bot NOT started.")
+            return
         # Point the bot at this same service's /chat endpoint by default.
         if not os.getenv("SOPIA_API_URL"):
             base = os.getenv("RENDER_EXTERNAL_URL", "http://localhost:5050")
@@ -1072,11 +1081,41 @@ def _start_telegram_bot():
         _telegram_started = True
         thread = threading.Thread(target=telegram_bot.main, daemon=True, name="telegram-bot")
         thread.start()
-        print("🤖 Telegram bot started in background thread.")
+        _telegram_status = f"running as @{me.get('username', 'bot')}"
+        print(f"🤖 Telegram bot started in background thread (@{me.get('username', 'bot')}).")
     except Exception as e:
+        _telegram_status = f"error: {e}"
         print(f"⚠️  Failed to start Telegram bot: {e}")
 
 _start_telegram_bot()
+
+
+def _start_self_keepalive():
+    """Prevent Render's free tier from sleeping after 15 min of inactivity.
+
+    The Telegram bot lives inside this process, so if the instance sleeps,
+    the bot stops responding. Pinging our own public /health every 4 minutes
+    keeps the instance awake permanently — no external monitor needed.
+    Only runs on Render (when RENDER_EXTERNAL_URL is set).
+    """
+    public_url = os.getenv("RENDER_EXTERNAL_URL", "")
+    if not public_url:
+        return  # not on Render — nothing to keep alive
+    import requests as _requests
+
+    def _ping():
+        while True:
+            try:
+                _requests.get(f"{public_url}/health", timeout=15)
+            except Exception:
+                pass
+            time.sleep(240)  # every 4 min — well under the 15 min idle threshold
+
+    thread = threading.Thread(target=_ping, daemon=True, name="self-keepalive")
+    thread.start()
+    print(f"🔄 Self keep-alive started → {public_url}/health")
+
+_start_self_keepalive()
 
 # -------------------------------------------------------------------------
 # ROUTES - ENHANCED WITH CLINICAL FEATURES + SOP ADDITION
@@ -1128,6 +1167,8 @@ def health():
             "api_status": api_status,
             "gemini_model": gemini_model,
             "deploy_version": DEPLOY_VERSION,
+            "telegram_status": _telegram_status,
+            "telegram_token_set": bool(os.getenv("TELEGRAM_BOT_TOKEN", "")),
             "medical_features": medical_status,
             "clinical_reasoning": reasoning_status,
             "cache_stats": cache_stats
