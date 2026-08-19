@@ -2,9 +2,9 @@
 
 # 🏥 SOPiA
 
-### Standard Operating Procedure Intelligent Assistant
+### Standard Operating Procedure Intelligent Assistance
 
-**SOPiA** (Standard Operating Procedure Intelligence Assistant) is a conversational AI that brings
+**SOPiA** (Standard Operating Procedure Intelligent Assistance) is a conversational AI that brings
 advanced HIV/AIDS care protocols to healthcare workers — instantly, on any device.
 
 [Features](#-features) · [Demo](#-demo) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Deploy](#-deployment) · [Tech Stack](#-tech-stack)
