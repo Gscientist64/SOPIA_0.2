@@ -965,7 +965,7 @@ CORS(app)
 
 # Bump this when you deploy a notable change — shown in /health so you can
 # always verify which build is actually running on Render.
-DEPLOY_VERSION = "2026-08-19.7"  # Telegram diagnostics + self keep-alive (no sleep)
+DEPLOY_VERSION = "2026-08-19.8"  # Telegram bot sends plain text (fixes 400 on "CD4 < 200")
 
 # Global state
 _kb: Optional[InMemoryKB] = None

@@ -39,13 +39,13 @@ WELCOME = (
     "Type /help for more info."
 )
 HELP = (
-    "🤖 <b>SOPiA</b> — AI HIV Care Assistant\n\n"
+    "🤖 SOPiA — AI HIV Care Assistant\n\n"
     "Just type your medical question and I'll answer using the SOP knowledge base.\n\n"
     "Commands:\n"
     "• /start — welcome message\n"
     "• /help — this help\n"
     "• /clear — reset conversation\n\n"
-    "⚠️ <i>Decision support only — always verify with a licensed clinician.</i>"
+    "⚠️ Decision support only — always verify with a licensed clinician."
 )
 
 
@@ -66,8 +66,31 @@ def get_updates(offset=None):
 
 
 def send_message(chat_id, text, reply_to=None):
-    call("sendMessage", chat_id=chat_id, text=text, parse_mode="HTML",
-         disable_web_page_preview=True, reply_to_message_id=reply_to)
+    """Send a text message.
+
+    Medical answers often contain raw HTML-sensitive characters like "<"
+    (e.g. "CD4 < 200"). We send as PLAIN TEXT to avoid Telegram's HTML
+    parser rejecting the message with a 400 error. If parse_mode is ever
+    requested and it fails, we fall back to plain text automatically.
+    """
+    data = {
+        "chat_id": chat_id,
+        "text": text,
+        "disable_web_page_preview": True,
+    }
+    if reply_to:
+        data["reply_to_message_id"] = reply_to
+    try:
+        resp = requests.post(f"{API}/sendMessage", json=data, timeout=30)
+        # If we ever add parse_mode later, retry without it on a 400.
+        if resp.status_code == 400 and "parse_mode" in data:
+            data.pop("parse_mode")
+            resp = requests.post(f"{API}/sendMessage", json=data, timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        log.error(f"Telegram API sendMessage failed: {e}")
+        return None
 
 
 def show_typing(chat_id):
